@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {teamKpi} from './lib/kpi.ts';
+import {seedPosts,validatePost} from './lib/marketing.ts';
+const p=seedPosts()[0];
+const week=(date,count)=>Array.from({length:10},(_,i)=>({...p,id:date+i,date,status:i<count?'Published':'Planned'}));
+assert.equal(teamKpi(week('2026-09-07',10),'Ella','2026-09-07').weekly,100);
+assert.equal(teamKpi(week('2026-09-07',8),'Ella','2026-09-07').contribution,20);
+const month=['2026-09-07','2026-09-14','2026-09-21','2026-09-28'].flatMap(d=>week(d,10));
+assert.equal(teamKpi(month,'Ella','2026-09-21').monthly,100);
+assert.equal(teamKpi([],'Ella','2026-09-21').monthly,0);
+assert.equal(teamKpi(week('2026-08-31',10),'Ella','2026-09-07').monthly,0);
+assert.throws(()=>validatePost({...p,status:'Published',url:''}));
+assert.throws(()=>validatePost({...p,url:'https://example.com',views:-1}));
+assert.equal(seedPosts().length,35);
+console.log('PASS: weekly 100%, proportional monthly 25%, monthly cap, month boundary, empty assignments and validation');
