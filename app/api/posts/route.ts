@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseUser, supabaseRest } from "../../../lib/supabase";
 import { seedPosts, validatePost } from "../../../lib/marketing";
 
-const allowedUids = (process.env.ALLOWED_USER_UIDS ?? "").split(",").map((value) => value.trim()).filter(Boolean);
 const fields = "id,title,content_type:contentType,platform,format,owners,date,posted_time:postedTime,status,url,views,likes,comments,shares";
 
 async function requireUser(request: NextRequest) {
@@ -10,8 +9,10 @@ async function requireUser(request: NextRequest) {
   if (!token) return { error: NextResponse.json({ error: "Login required." }, { status: 401 }) };
   const user = await getSupabaseUser(token);
   if (!user) return { error: NextResponse.json({ error: "Invalid login session." }, { status: 401 }) };
-  if (!allowedUids.includes(user.id)) return { error: NextResponse.json({ error: "This account is not allowed to access PC Hub Marketing." }, { status: 403 }) };
-  return { user };
+  const profileResponse = await supabaseRest(`profiles?id=eq.${user.id}&select=approval_status,role`);
+  const [profile] = await profileResponse.json().catch(() => []) as Array<{ approval_status: string; role: string }>;
+  if (!profile || profile.approval_status !== "approved") return { error: NextResponse.json({ error: "This account is waiting for admin approval." }, { status: 403 }) };
+  return { user, profile };
 }
 
 async function jsonError(response: Response) {

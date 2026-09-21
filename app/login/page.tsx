@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getBrowserSupabaseClient } from "../../lib/supabase";
+import { getBrowserSupabaseClient, hasSupabaseConfig } from "../../lib/supabase";
 
 const allowedUids = (process.env.NEXT_PUBLIC_ALLOWED_USER_UIDS ?? "").split(",").map((value) => value.trim()).filter(Boolean);
 
@@ -16,10 +16,10 @@ export default function LoginPage() {
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setLoading(true); setError("");
-    const email = username.trim().toLowerCase() === "admin" ? "admin@pchub.local" : username.trim();
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+    const normalized = username.trim().toLowerCase();
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email: normalized === "admin" && !hasSupabaseConfig() ? "admin@pchub.local" : `${normalized}@login.pchub.local`, password });
     if (loginError || !data.user) { setError(loginError?.message ?? "Unable to sign in."); setLoading(false); return; }
-    if ((allowedUids.length && !allowedUids.includes(data.user.id)) || (!allowedUids.length && data.user.id !== "local-demo-admin")) { await supabase.auth.signOut(); setError("This account is not allowed to access PC Hub Marketing."); setLoading(false); return; }
+    if ((allowedUids.length && !allowedUids.includes(data.user.id)) || (!hasSupabaseConfig() && data.user.id !== "local-demo-admin")) { await supabase.auth.signOut(); setError("This account is not allowed to access PC Hub Marketing."); setLoading(false); return; }
     router.replace("/");
   }
 
