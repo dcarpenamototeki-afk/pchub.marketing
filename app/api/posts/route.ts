@@ -1,11 +1,39 @@
-import {db} from '../../../lib/db';
-import {seedPosts,validatePost} from '../../../lib/marketing';
-import {getChatGPTUser} from '../../chatgpt-auth';
-async function requireUser(){return (await getChatGPTUser()) ? null : Response.json({error:'Sign in is required.'},{status:401});}
-export async function GET(){const denied=await requireUser();if(denied)return denied;try{const database=db();await database.batch(seedPosts().map(p=>database.prepare('INSERT OR IGNORE INTO posts (id,data) VALUES (?,?)').bind(p.id,JSON.stringify(p))));const result=await database.prepare('SELECT data FROM posts').all<{data:string}>();return Response.json(result.results.map(r=>JSON.parse(r.data)),{headers:{'Cache-Control':'no-store'}});}catch(e){console.error(e);return Response.json({error:'Could not load the shared workspace. Please retry.'},{status:503});}}
-export async function POST(request:Request){
- const denied=await requireUser();if(denied)return denied;
- if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
- let post;try{post=validatePost(await request.json());}catch(e){return Response.json({error:e instanceof Error?e.message:'Invalid post'},{status:400});}
- try{await db().prepare('INSERT INTO posts (id,data) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data').bind(post.id,JSON.stringify(post)).run();return Response.json(post);}catch(e){console.error(e);return Response.json({error:'Could not save. Your edits are still here; please retry.'},{status:503});}
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseUser, supabaseRest } from "../../../lib/supabase";
+import { seedPosts, validatePost } from "../../../lib/marketing";
+
+const allowedUids = (process.env.ALLOWED_USER_UIDS ?? "").split(",").map((value) => value.trim()).filter(Boolean);
+const fields = "id,title,content_type:contentType,platform,format,owners,date,posted_time:postedTime,status,url,views,likes,comments,shares";
+
+async function requireUser(request: NextRequest) {
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return { error: NextResponse.json({ error: "Login required." }, { status: 401 }) };
+  const user = await getSupabaseUser(token);
+  if (!user) return { error: NextResponse.json({ error: "Invalid login session." }, { status: 401 }) };
+  if (!allowedUids.includes(user.id)) return { error: NextResponse.json({ error: "This account is not allowed to access PC Hub Marketing." }, { status: 403 }) };
+  return { user };
+}
+
+async function jsonError(response: Response) {
+  const body = await response.json().catch(() => ({})) as { message?: string; hint?: string };
+  return NextResponse.json({ error: body.message ?? body.hint ?? "Supabase request failed." }, { status: 500 });
+}
+
+export async function GET(request: NextRequest) {
+  const auth = await requireUser(request); if (auth.error) return auth.error;
+  const seed = await supabaseRest("marketing_posts?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" }, body: JSON.stringify(seedPosts()) });
+  if (!seed.ok) return jsonError(seed);
+  const posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(fields)}&order=date.asc`);
+  if (!posts.ok) return jsonError(posts);
+  return NextResponse.json(await posts.json());
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await requireUser(request); if (auth.error) return auth.error;
+  let post;
+  try { post = validatePost(await request.json()); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid post." }, { status: 400 }); }
+  const saved = await supabaseRest("marketing_posts?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(post) });
+  if (!saved.ok) return jsonError(saved);
+  const [data] = await saved.json() as unknown[];
+  return NextResponse.json(data);
 }
