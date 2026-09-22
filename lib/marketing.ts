@@ -18,7 +18,7 @@ export function validatePost(raw:unknown):Post {
  const p=raw as Post;
  if(typeof p.id!=='string'||!p.id||p.id.length>100||typeof p.title!=='string'||!p.title.trim()||p.title.length>200)throw Error('Enter a title (up to 200 characters).');
  if(!['Facebook','TikTok'].includes(p.platform)||!['Main output','Reel','Static'].includes(p.format)||!statuses.includes(p.status)||!contentTypes.includes(p.contentType))throw Error('Choose a valid platform, content type, format and status.');
- if(!Array.isArray(p.owners)||!p.owners.length||p.owners.some(x=>!staff.includes(x)))throw Error('Assign at least one team member.');
+ if(!Array.isArray(p.owners)||!p.owners.length||p.owners.some(x=>typeof x!=='string'||!x.trim()))throw Error('Assign at least one team member.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(p.date)||Number.isNaN(Date.parse(p.date))||new Date(p.date).toISOString().slice(0,10)!==p.date)throw Error('Choose a valid date.');
  if(typeof p.postedTime!=='string'||(p.postedTime&&!/^\d{2}:\d{2}$/.test(p.postedTime)))throw Error('Choose a valid posting time.');
  if(typeof p.url!=='string'||p.url.length>2048)throw Error('Invalid post link.');
