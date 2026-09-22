@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseUser, supabaseRest } from "../../../lib/supabase";
-import { seedPosts, validatePost } from "../../../lib/marketing";
+import { validatePost } from "../../../lib/marketing";
 
 const fields = "id,title,contentType:content_type,platform,format,owners,date,postedTime:posted_time,status,url,views,likes,comments,shares";
 
@@ -27,8 +27,6 @@ async function jsonError(response: Response) {
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser(request); if (auth.error) return auth.error;
-  const seed = await supabaseRest("marketing_posts?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" }, body: JSON.stringify(seedPosts().map(databasePost)) });
-  if (!seed.ok) return jsonError(seed);
   const posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(fields)}&order=date.asc`);
   if (!posts.ok) return jsonError(posts);
   return NextResponse.json(await posts.json());
@@ -38,8 +36,23 @@ export async function POST(request: NextRequest) {
   const auth = await requireUser(request); if (auth.error) return auth.error;
   let post;
   try { post = validatePost(await request.json()); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid post." }, { status: 400 }); }
+  if (auth.profile.role !== "admin") {
+    const existing = await supabaseRest(`marketing_posts?id=eq.${encodeURIComponent(post.id)}&select=status`);
+    const [current] = await existing.json().catch(() => []) as Array<{ status: string }>;
+    if (current?.status === "Published") return NextResponse.json({ error: "Published posts are locked. Only an admin can edit them." }, { status: 403 });
+  }
   const saved = await supabaseRest("marketing_posts?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(databasePost(post)) });
   if (!saved.ok) return jsonError(saved);
   const [data] = await saved.json() as unknown[];
   return NextResponse.json(data);
+}
+
+export async function DELETE(request: NextRequest) {
+  const auth = await requireUser(request); if (auth.error) return auth.error;
+  if (auth.profile.role !== "admin") return NextResponse.json({ error: "Only admins can delete posts." }, { status: 403 });
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Post id is required." }, { status: 400 });
+  const removed = await supabaseRest(`marketing_posts?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+  if (!removed.ok) return jsonError(removed);
+  return NextResponse.json({ ok: true });
 }
