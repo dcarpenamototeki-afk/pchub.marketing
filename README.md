@@ -29,7 +29,7 @@ Run `npm run build` for a Vercel-compatible production build. The Supabase schem
 ## Windows local use
 
 Double-click `Start-PC-Hub.cmd`, then sign in with your approved live staff account.
-The app runs at http://localhost:3000 and only listens on this PC.
+The app runs at http://localhost:3001 and only listens on this PC.
 This PC is configured to use the live workspace as described below.
 The launcher uses the production build, so rebuild after updating source code.
 The ignored `.env.local` file contains the public Supabase settings and live API destination.
