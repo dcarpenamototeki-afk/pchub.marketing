@@ -16,3 +16,7 @@ const identity=entryIdentity(undefined,'ella-uid','Ella','Planned',false,'2026-0
 const edited=entryIdentity({...identity,owners:['Ella']},'reg-uid','Reg','For posting',true,'2026-09-27T06:00:00Z');assert.equal(edited.owners[0],'Ella');assert.equal(edited.createdBy,'ella-uid');assert.equal(edited.createdAt,identity.createdAt);assert.equal(edited.completedAt,'2026-09-27T06:00:00Z');
 const caption='New PC build ✨🔥\nReady na! 🖥️';const entry=validatePost({...seed,caption,status:'For posting'});assert.equal(postToRow(entry).caption,caption);assert.match(manilaTimestamp('2026-09-27T05:15:00Z'),/1:15 PM/);
 console.log('PASS: server-derived owner, edit identity preservation, emoji caption, For posting status, AM/PM Manila timestamp.');
+assert.throws(()=>validatePost({...seed,assetUrl:url,status:'Published',completedAt:'2026-09-27T05:00:00Z',url:''}));
+assert.throws(()=>validatePost({...seed,assetUrl:url,status:'Published',completedAt:'2026-09-27T05:00:00Z',url:'https://example.com/post'}));
+assert.equal(validatePost({...seed,assetUrl:url,status:'Published',completedAt:'2026-09-27T05:00:00Z',url:'https://www.tiktok.com/@pchub/video/123'}).status,'Published');
+console.log('PASS: Done publication requires a valid platform link.');

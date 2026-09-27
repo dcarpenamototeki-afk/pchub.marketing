@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     if(!team.ok)return jsonError(team);
     const names=(await team.json() as {name:string}[]).map(row=>row.name);
     const name=accountName(auth.profile.username,names);
+    if(raw.completedAt&&!current?.completedAt&&(raw.status!=='Published'||typeof raw.url!=='string'||!raw.url.trim()))return NextResponse.json({error:'Add the published post link to mark this entry Done.'},{status:400});
     const identity=entryIdentity(current,auth.user.id,name,String(raw.status),Boolean(raw.completedAt),new Date().toISOString());
     post=validatePost({...raw,...identity});
   } catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Invalid entry.'},{status:400});}
