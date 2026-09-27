@@ -1,3 +1,4 @@
+import {accountName,entryIdentity} from '../../../lib/entry-details';
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseUser, supabaseRest } from "../../../lib/supabase";
 import { validatePost } from "../../../lib/marketing";
@@ -10,8 +11,8 @@ async function requireUser(request: NextRequest) {
   if (!token) return { error: NextResponse.json({ error: "Login required." }, { status: 401 }) };
   const user = await getSupabaseUser(token);
   if (!user) return { error: NextResponse.json({ error: "Invalid login session." }, { status: 401 }) };
-  const profileResponse = await supabaseRest(`profiles?id=eq.${user.id}&select=approval_status,role`);
-  const [profile] = await profileResponse.json().catch(() => []) as Array<{ approval_status: string; role: string }>;
+  const profileResponse = await supabaseRest(`profiles?id=eq.${user.id}&select=approval_status,role,username`);
+  const [profile] = await profileResponse.json().catch(() => []) as Array<{ approval_status: string; role: string; username: string }>;
   if (!profile || profile.approval_status !== "approved") return { error: NextResponse.json({ error: "This account is waiting for admin approval." }, { status: 403 }) };
   return { user, profile };
 }
@@ -25,18 +26,26 @@ export async function GET(request: NextRequest) {
   const auth = await requireUser(request); if (auth.error) return auth.error;
   const posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(fields)}&order=date.asc`);
   if (!posts.ok) return jsonError(posts);
-  return NextResponse.json(((await posts.json()) as Post[]).map(normalizePost), {headers:{"X-PC-Hub-Calendar":"1"}});
+  return NextResponse.json(((await posts.json()) as Post[]).map(normalizePost), {headers:{"X-PC-Hub-Calendar":"2"}});
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requireUser(request); if (auth.error) return auth.error;
   let post;
-  try { post = validatePost(await request.json()); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid post." }, { status: 400 }); }
-  if (auth.profile.role !== "admin") {
-    const existing = await supabaseRest(`marketing_posts?id=eq.${encodeURIComponent(post.id)}&select=status`);
-    const [current] = await existing.json().catch(() => []) as Array<{ status: string }>;
-    if (current?.status === "Published") return NextResponse.json({ error: "Published posts are locked. Only an admin can edit them." }, { status: 403 });
-  }
+  try {
+    const raw=await request.json() as Record<string, unknown>;
+    if(typeof raw?.id!=='string'||!raw.id||raw.id.length>100)return NextResponse.json({error:'Invalid entry id.'},{status:400});
+    const existing=await supabaseRest(`marketing_posts?id=eq.${encodeURIComponent(raw.id)}&select=${encodeURIComponent(fields)}`);
+    if(!existing.ok)return jsonError(existing);
+    const [current]=await existing.json() as Post[];
+    if(current?.status==='Published'&&auth.profile.role!=='admin')return NextResponse.json({error:'Published posts are locked. Only an admin can edit them.'},{status:403});
+    const team=await supabaseRest('team_members?active=eq.true&select=name');
+    if(!team.ok)return jsonError(team);
+    const names=(await team.json() as {name:string}[]).map(row=>row.name);
+    const name=accountName(auth.profile.username,names);
+    const identity=entryIdentity(current,auth.user.id,name,String(raw.status),Boolean(raw.completedAt),new Date().toISOString());
+    post=validatePost({...raw,...identity});
+  } catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Invalid entry.'},{status:400});}
   const saved = await supabaseRest(`marketing_posts?on_conflict=id&select=${encodeURIComponent(fields)}`, { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(postToRow(post)) });
   if (!saved.ok) return jsonError(saved);
   const [data] = await saved.json() as Post[];
