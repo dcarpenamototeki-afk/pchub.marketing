@@ -1,4 +1,5 @@
-export type Post = { id:string; title:string; contentType:string; platform:string; format:string; owners:string[]; date:string; postedTime:string; status:string; url:string; views:number|null; likes:number|null; comments:number|null; shares:number|null };
+import {validateAssetLink} from './assets';
+export type Post = { assetUrl?:string; assetType?:string; coverUrl?:string; completedAt?:string|null; id:string; title:string; contentType:string; platform:string; format:string; owners:string[]; date:string; postedTime:string; status:string; url:string; views:number|null; likes:number|null; comments:number|null; shares:number|null };
 export const staff=['Ella','Reg','Elijah'];
 export const statuses=['Planned','In progress','For review','Published'];
 export const contentTypes=['Entertainment','Product showcase','Educational','Community','Promotion','Other'];
@@ -25,6 +26,11 @@ export function validatePost(raw:unknown):Post {
  if(p.url){const u=new URL(p.url);const hosts=p.platform==='Facebook'?['facebook.com','www.facebook.com','m.facebook.com','fb.watch']:['tiktok.com','www.tiktok.com','vm.tiktok.com','vt.tiktok.com'];if(u.protocol!=='https:'||!hosts.includes(u.hostname))throw Error('Use an HTTPS link from the selected platform.');}
  if(p.status==='Published'&&!p.url)throw Error('Add the published post link first.');
  for(const key of ['views','likes','comments','shares'] as const)if(p[key]!==null&&(!Number.isSafeInteger(p[key])||(p[key] as number)<0))throw Error('Metrics must be non-negative whole numbers.');
- return {...p,title:p.title.trim(),owners:[...new Set(p.owners)]};
+ const assetUrl=p.assetUrl??'',coverUrl=p.coverUrl??'',assetType=p.assetType??'image',completedAt=p.completedAt??null;
+ validateAssetLink(assetUrl);validateAssetLink(coverUrl);
+ if(!['image','video'].includes(assetType))throw Error('Choose image or video.');
+ if(completedAt!==null&&(typeof completedAt!=='string'||!Number.isFinite(Date.parse(completedAt))))throw Error('Invalid completion date.');
+ if(completedAt&&!assetUrl)throw Error('Add the Drive asset before marking Done.');
+ return {...p,title:p.title.trim(),owners:[...new Set(p.owners)],assetUrl,assetType,coverUrl,completedAt};
 }
 
