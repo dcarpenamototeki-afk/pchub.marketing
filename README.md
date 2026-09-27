@@ -42,7 +42,7 @@ Sign in with your approved live staff account. Local and live browser sessions a
 
 ## Calendar assets and Team Pulse rollout
 
-1. Apply `supabase/migrations/003_calendar_assets.sql` in the existing PC Hub Supabase project's SQL Editor. This adds asset URL/type, cover URL and completion timestamp columns without replacing records.
+1. Apply `supabase/migrations/005_calendar_assets.sql` in the existing PC Hub Supabase project's SQL Editor. This adds asset URL/type, cover URL and completion timestamp columns without replacing records.
 2. Deploy this source to the existing Vercel project. Keep its existing Supabase environment settings. `LOCAL_LIVE_API_ORIGIN` is only for this PC, not Vercel.
 3. Rebuild/restart the local app and sign in with an approved staff account. The local proxy uses the updated live API.
 4. In Calendar, add an entry with a Google Drive **file** link, select Image or Video, and optionally add a cover photo file link. Open links use the viewer's Google Drive permissions. Mark Done after finishing the task; it then appears in the Overview Team Pulse for the selected week. Published status and social analytics remain separate.

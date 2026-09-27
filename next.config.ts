@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: liveApiOrigin
-        ? [{ source: "/api/posts", destination: "https://pchub-marketing.vercel.app/api/posts" }]
+        ? ["posts", "team"].map(resource => ({ source: `/api/${resource}`, destination: `https://pchub-marketing.vercel.app/api/${resource}` }))
         : [],
       afterFiles: [],
       fallback: [],
