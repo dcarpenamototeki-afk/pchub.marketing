@@ -24,8 +24,16 @@ async function jsonError(response: Response) {
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser(request); if (auth.error) return auth.error;
-  const posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(fields)}&order=date.asc`);
-  if (!posts.ok) return jsonError(posts);
+  let posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(fields)}&order=date.asc`);
+  if (!posts.ok) {
+    const body = await posts.json().catch(() => ({})) as { message?: string };
+    if (!body.message?.includes("image_two_url")) return NextResponse.json({ error: body.message ?? "Unable to load entries." }, { status: 500 });
+    const legacyFields = fields.replace(",imageTwoUrl:image_two_url", "");
+    posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(legacyFields)}&order=date.asc`);
+    if (!posts.ok) return jsonError(posts);
+    const legacyRows = await posts.json() as Post[];
+    return NextResponse.json(legacyRows.map(post => normalizePost({ ...post, imageTwoUrl: "" })), { headers: { "X-PC-Hub-Calendar": "2", "X-PC-Hub-Media-Migration": "pending" } });
+  }
   return NextResponse.json(((await posts.json()) as Post[]).map(normalizePost), {headers:{"X-PC-Hub-Calendar":"2"}});
 }
 
