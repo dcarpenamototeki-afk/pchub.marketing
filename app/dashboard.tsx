@@ -5,14 +5,14 @@ import {Post,staff as initialStaff,statuses,contentTypes,validatePost,seedPosts}
 import {teamKpi} from '../lib/kpi';
 import {getBrowserSupabaseClient,hasSupabaseConfig} from '../lib/supabase';
 import {AssetLinks} from '../components/asset-links';
-import {accountName,manilaTimestamp,clockTime,manilaDate} from '../lib/entry-details';
+import {accountName,manilaTimestamp,clockTime,manilaDate,mondayOfWeek} from '../lib/entry-details';
 const sections=['Overview','Calendar','Analytics','Team KPI'];
 const icons=[LayoutDashboard,CalendarDays,ChartNoAxesCombined,Users];
 const fmt=(n:number)=>new Intl.NumberFormat('en',{notation:'compact',maximumFractionDigits:1}).format(n);
 function Avatar({name}:{name:string}){return <span className={'avatar '+name.toLowerCase()} title={name}>{name[0]}</span>}
 function Platform({name}:{name:string}){return <span className={'platform '+name.toLowerCase()}>{name==='Facebook'?'f':'♪'}</span>}
 export default function Dashboard(){
- const [view,setView]=useState('Overview'),[posts,setPosts]=useState<Post[]>([]),[staff,setStaff]=useState<string[]>(initialStaff),[loading,setLoading]=useState(true),[error,setError]=useState(''),[platform,setPlatform]=useState('All platforms'),[person,setPerson]=useState('All members'),[query,setQuery]=useState(''),[week,setWeek]=useState(()=>manilaDate()),[edit,setEdit]=useState<Post|null>(null),[preview,setPreview]=useState<Post|null>(null),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[userName,setUserName]=useState(''),[selected,setSelected]=useState<string[]>([]),[notificationsOpen,setNotificationsOpen]=useState(false),[currentTime,setCurrentTime]=useState(()=>new Date());
+ const [view,setView]=useState('Overview'),[posts,setPosts]=useState<Post[]>([]),[staff,setStaff]=useState<string[]>(initialStaff),[loading,setLoading]=useState(true),[error,setError]=useState(''),[platform,setPlatform]=useState('All platforms'),[person,setPerson]=useState('All members'),[query,setQuery]=useState(''),[week,setWeek]=useState(()=>mondayOfWeek(manilaDate())),[edit,setEdit]=useState<Post|null>(null),[preview,setPreview]=useState<Post|null>(null),[saving,setSaving]=useState(false),[message,setMessage]=useState(''),[userName,setUserName]=useState(''),[selected,setSelected]=useState<string[]>([]),[notificationsOpen,setNotificationsOpen]=useState(false),[currentTime,setCurrentTime]=useState(()=>new Date());
  const supabase=useMemo(()=>getBrowserSupabaseClient(),[]); const isAdmin=userName.startsWith('admin@');
  const [calendarReady,setCalendarReady]=useState(false),[mediaReady,setMediaReady]=useState(true);
  const [pending,setPending]=useState<string|null>(null),[actionError,setActionError]=useState('');
