@@ -1,6 +1,13 @@
 /* Calendar asset workflow */
 .quickgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .calendarpost{display:flex;flex-direction:column;gap:9px;text-align:left}
+.calendarpost-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.calendar-status{border-radius:5px;padding:4px 7px;font-size:10px;font-weight:700;line-height:1;white-space:nowrap}
+.calendar-status.published{background:#dcf2e4;color:#216c48}
+.calendar-status.for-posting{background:#ddecff;color:#26639b}
+.calendar-status.for-review{background:#fff0cf;color:#87611a}
+.calendar-status.in-progress{background:#eee5ff;color:#6947a1}
+.calendar-status.planned{background:#eceff3;color:#5e6876}
 .calendarpost .titlebutton{text-align:left;font-weight:700;white-space:normal}
 .calendarpost .secondary,.done-button{width:100%;padding:8px;border-radius:6px;font-size:12px}
 .done-button{background:#216c48;color:white;font-weight:700}
