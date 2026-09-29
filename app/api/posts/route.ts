@@ -1,4 +1,4 @@
-import {accountName,entryIdentity} from '../../../lib/entry-details';
+import {accountName,entryIdentity,manilaDate} from '../../../lib/entry-details';
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseUser, supabaseRest } from "../../../lib/supabase";
 import { validatePost } from "../../../lib/marketing";
@@ -41,12 +41,20 @@ export async function POST(request: NextRequest) {
   const auth = await requireUser(request); if (auth.error) return auth.error;
   let post;
   try {
-    const raw=await request.json() as Record<string, unknown>;
+    let raw=await request.json() as Record<string, unknown>;
     if(typeof raw?.id!=='string'||!raw.id||raw.id.length>100)return NextResponse.json({error:'Invalid entry id.'},{status:400});
     const existing=await supabaseRest(`marketing_posts?id=eq.${encodeURIComponent(raw.id)}&select=${encodeURIComponent(fields)}`);
     if(!existing.ok)return jsonError(existing);
     const [current]=await existing.json() as Post[];
-    if(current?.status==='Published'&&auth.profile.role!=='admin')return NextResponse.json({error:'Published posts are locked. Only an admin can edit them.'},{status:403});
+    if(auth.profile.role!=='admin'){
+      const today=manilaDate();
+      if(!current&&raw.date!==today)return NextResponse.json({error:'Staff can only add entries for the current Manila date.'},{status:403});
+      if(current){
+        if(current.date!==today)return NextResponse.json({error:'This entry is locked because its posting day has ended. Only an admin can edit it.'},{status:403});
+        if(!raw.completedAt||current.completedAt)return NextResponse.json({error:'Only an admin can edit an existing entry.'},{status:403});
+        raw={...current,url:raw.url,status:raw.status,completedAt:raw.completedAt};
+      }
+    }
     const team=await supabaseRest('team_members?active=eq.true&select=name');
     if(!team.ok)return jsonError(team);
     const names=(await team.json() as {name:string}[]).map(row=>row.name);
