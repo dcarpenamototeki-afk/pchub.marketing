@@ -1,4 +1,6 @@
-export function accountName(username:string,names:string[]=[]){return names.find(name=>name.toLowerCase()===username.toLowerCase())??username;}
+const compact=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
+export function staffNameMatches(owner:string,name:string){const left=compact(owner),right=compact(name);return left===right||(right.length>=3&&left.startsWith(right));}
+export function accountName(username:string,names:string[]=[]){return names.find(name=>staffNameMatches(username,name))??username;}
 export function entryIdentity(current:{owners:string[];createdBy?:string|null;createdAt?:string|null;publishedAt?:string|null;completedAt?:string|null}|undefined,userId:string,name:string,status:string,done:boolean,now:string){
  return {owners:current?.owners??[name],createdBy:current?.createdBy??(current?null:userId),createdAt:current?.createdAt??now,publishedAt:current?.publishedAt??(status==='Published'?now:null),completedAt:current?.completedAt??(done?now:null)};
 }
