@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const [current]=await existing.json() as Post[];
     if(auth.profile.role!=='admin'){
       const today=manilaDate();
-      if(!current&&raw.date!==today)return NextResponse.json({error:'Staff can only add entries for the current Manila date.'},{status:403});
+      if(!current&&(typeof raw.date!=='string'||raw.date<today))return NextResponse.json({error:'Staff cannot add entries for past Manila dates.'},{status:403});
       if(current){
         if(current.date!==today)return NextResponse.json({error:'This entry is locked because its posting day has ended. Only an admin can edit it.'},{status:403});
         if(!raw.completedAt||current.completedAt)return NextResponse.json({error:'Only an admin can edit an existing entry.'},{status:403});
