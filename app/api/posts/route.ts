@@ -1,4 +1,4 @@
-import {accountName,entryIdentity,manilaDate} from '../../../lib/entry-details';
+import {accountName,daysBefore,entryIdentity,manilaDate} from '../../../lib/entry-details';
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseUser, supabaseRest } from "../../../lib/supabase";
 import { validatePost } from "../../../lib/marketing";
@@ -24,17 +24,19 @@ async function jsonError(response: Response) {
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser(request); if (auth.error) return auth.error;
-  let posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(fields)}&order=date.asc`);
-  if (!posts.ok) {
+  let selectedFields = fields, mediaPending = false, delayPending = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(selectedFields)}&order=date.asc`);
+    if (posts.ok) {
+      const rows = (await posts.json()) as Post[];
+      return NextResponse.json(rows.map(post => normalizePost({ ...post, ...(mediaPending ? { imageTwoUrl: "" } : {}), ...(delayPending ? { delayReason: undefined } : {}) })), { headers: { "X-PC-Hub-Calendar": "2", ...(mediaPending ? { "X-PC-Hub-Media-Migration": "pending" } : {}), ...(delayPending ? { "X-PC-Hub-Delay-Migration": "pending" } : {}) } });
+    }
     const body = await posts.json().catch(() => ({})) as { message?: string };
-    if (!body.message?.includes("image_two_url")) return NextResponse.json({ error: body.message ?? "Unable to load entries." }, { status: 500 });
-    const legacyFields = fields.replace(",imageTwoUrl:image_two_url", "");
-    posts = await supabaseRest(`marketing_posts?select=${encodeURIComponent(legacyFields)}&order=date.asc`);
-    if (!posts.ok) return jsonError(posts);
-    const legacyRows = await posts.json() as Post[];
-    return NextResponse.json(legacyRows.map(post => normalizePost({ ...post, imageTwoUrl: "" })), { headers: { "X-PC-Hub-Calendar": "2", "X-PC-Hub-Media-Migration": "pending" } });
+    if (body.message?.includes("image_two_url") && !mediaPending) { selectedFields = selectedFields.replace(",imageTwoUrl:image_two_url", ""); mediaPending = true; continue; }
+    if (body.message?.includes("delay_reason") && !delayPending) { selectedFields = selectedFields.replace(",delayReason:delay_reason", ""); delayPending = true; continue; }
+    return NextResponse.json({ error: body.message ?? "Unable to load entries." }, { status: 500 });
   }
-  return NextResponse.json(((await posts.json()) as Post[]).map(normalizePost), {headers:{"X-PC-Hub-Calendar":"2"}});
+  return NextResponse.json({ error: "Unable to load entries." }, { status: 500 });
 }
 
 export async function POST(request: NextRequest) {
@@ -50,9 +52,10 @@ export async function POST(request: NextRequest) {
       const today=manilaDate();
       if(!current&&(typeof raw.date!=='string'||raw.date<today))return NextResponse.json({error:'Staff cannot add entries for past Manila dates.'},{status:403});
       if(current){
-        if(current.date!==today)return NextResponse.json({error:'This entry is locked because its posting day has ended. Only an admin can edit it.'},{status:403});
+        if(current.date>today)return NextResponse.json({error:'This entry cannot be marked Done before its posting date.'},{status:403});
         if(!raw.completedAt||current.completedAt)return NextResponse.json({error:'Only an admin can edit an existing entry.'},{status:403});
-        raw={...current,url:raw.url,status:raw.status,completedAt:raw.completedAt};
+        if(current.date<=daysBefore(today,2)&&(!raw.delayReason||typeof raw.delayReason!=='string'||!raw.delayReason.trim()))return NextResponse.json({error:'Enter the Reason of Delay before completing a post from two or more days ago.'},{status:400});
+        raw={...current,url:raw.url,status:raw.status,completedAt:raw.completedAt,delayReason:raw.delayReason};
       }
     }
     const team=await supabaseRest('team_members?active=eq.true&select=name');

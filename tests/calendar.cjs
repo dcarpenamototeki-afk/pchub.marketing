@@ -10,10 +10,12 @@ const done=validatePost({...seed,assetUrl:url,assetType:'video',coverUrl:'https:
 assert.equal(done.status,'Planned');assert.equal(done.completedAt,'2026-09-27T05:00:00Z');
 const row=postToRow(done);assert.equal(row.asset_url,url);assert.equal(row.image_two_url,done.imageTwoUrl);assert.equal(row.completed_at,done.completedAt);assert.equal(row.posted_time,null);assert.equal(row.contentType,undefined);assert.ok(postFields.includes('imageTwoUrl:image_two_url'));assert.equal(normalizePost({...done,postedTime:'12:30:00'}).postedTime,'12:30');assert.equal(normalizePost({...done,postedTime:null}).postedTime,'');
 console.log('PASS: Drive links, resource keys, unsafe/folder URL rejection, Done validation, publication independence, and database round-trip fields.');
-const {accountName,staffNameMatches,entryIdentity,manilaTimestamp}=load('entry-details');
+const {accountName,staffNameMatches,entryIdentity,manilaTimestamp,daysBefore}=load('entry-details');
 assert.equal(accountName('ella',['Ella','Reg']),'Ella');
 assert.equal(accountName('reginajoycamasis',['Ella','Reg']),'Reg');
 assert.equal(staffNameMatches('reginajoycamasis','Reg'),true);
+assert.equal(daysBefore('2026-09-30',2),'2026-09-28');
+assert.equal(validatePost({...seed,delayReason:'Late asset handoff'}).delayReason,'Late asset handoff');
 const {teamKpi}=load('kpi');
 const regKpi=teamKpi([{...seed,owners:['reginajoycamasis'],date:'2026-09-28',platform:'TikTok',format:'Reel',status:'Published'},{...seed,id:'reg-2',owners:['reginajoycamasis'],date:'2026-09-29',platform:'Facebook',format:'Reel',status:'Published'}],'Reg','2026-09-28');
 assert.equal(regKpi.published,2);assert.equal(regKpi.done,2);
