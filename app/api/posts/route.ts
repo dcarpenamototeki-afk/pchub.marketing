@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
     if(typeof raw?.id!=='string'||!raw.id||raw.id.length>100)return NextResponse.json({error:'Invalid entry id.'},{status:400});
     const existing=await supabaseRest(`marketing_posts?id=eq.${encodeURIComponent(raw.id)}&select=${encodeURIComponent(fields)}`);
     if(!existing.ok)return jsonError(existing);
-    const [current]=await existing.json() as Post[];
+    const [stored]=await existing.json() as Post[];
+    const current=stored?normalizePost(stored):undefined;
     if(auth.profile.role!=='admin'){
       const today=manilaDate();
       if(!current&&(typeof raw.date!=='string'||raw.date<today))return NextResponse.json({error:'Staff cannot add entries for past Manila dates.'},{status:403});
