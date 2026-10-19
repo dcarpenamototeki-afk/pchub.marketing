@@ -53,10 +53,13 @@ export async function POST(request: NextRequest) {
       const today=manilaDate();
       if(!current&&(typeof raw.date!=='string'||raw.date<today))return NextResponse.json({error:'Staff cannot add entries for past Manila dates.'},{status:403});
       if(current){
-        if(current.date>today)return NextResponse.json({error:'This entry cannot be marked Done before its posting date.'},{status:403});
-        if(!raw.completedAt||current.completedAt)return NextResponse.json({error:'Only an admin can edit an existing entry.'},{status:403});
-        if(current.date<=daysBefore(today,2)&&(!raw.delayReason||typeof raw.delayReason!=='string'||!raw.delayReason.trim()))return NextResponse.json({error:'Enter the Reason of Delay before completing a post from two or more days ago.'},{status:400});
-        raw={...current,url:raw.url,status:raw.status,completedAt:raw.completedAt,delayReason:raw.delayReason};
+        const scheduling=raw.status==='Scheduled'&&!raw.completedAt&&current.status!=='Published';
+        const publishing=raw.status==='Published'&&Boolean(raw.completedAt)&&!current.completedAt;
+        if(!scheduling&&!publishing)return NextResponse.json({error:'Only an admin can edit an existing entry.'},{status:403});
+        if(scheduling&&!current.postedTime)return NextResponse.json({error:'Set a posting time before marking this entry Scheduled.'},{status:400});
+        if(publishing&&current.date>today)return NextResponse.json({error:'This entry cannot be marked Published before its posting date.'},{status:403});
+        if(publishing&&current.date<=daysBefore(today,2)&&(!raw.delayReason||typeof raw.delayReason!=='string'||!raw.delayReason.trim()))return NextResponse.json({error:'Enter the Reason of Delay before publishing a post from two or more days ago.'},{status:400});
+        raw={...current,url:publishing?raw.url:current.url,status:raw.status,completedAt:publishing?raw.completedAt:current.completedAt,delayReason:publishing?raw.delayReason:current.delayReason};
       }
     }
     const team=await supabaseRest('team_members?active=eq.true&select=name');

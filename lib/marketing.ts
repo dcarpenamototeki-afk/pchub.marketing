@@ -1,7 +1,7 @@
 import {validateAssetLink} from './assets';
 export type Post = {caption?:string;createdBy?:string|null;createdAt?:string|null;publishedAt?:string|null; assetUrl?:string; assetType?:string; coverUrl?:string; imageTwoUrl?:string; delayReason?:string; completedAt?:string|null; id:string; title:string; contentType:string; platform:string; format:string; owners:string[]; date:string; postedTime:string; status:string; url:string; views:number|null; likes:number|null; comments:number|null; shares:number|null };
 export const staff=['Ella','Reg','Elijah'];
-export const statuses=['Planned','In progress','For review','For posting','Published'];
+export const statuses=['Planned','In progress','For review','For posting','Scheduled','Published'];
 export const contentTypes=['Entertainment','Product showcase','Educational','Community','Promotion','Other'];
 export function seedPosts():Post[] {
  const main=[['POV / Entertainment','Ella','Trivia','Reg'],['POV / Meme','Reg','Trivia','Ella'],['Trivia','Reg','POV / Meme','Elijah'],['Trivia','Elijah','POV / Meme','Reg'],['Trivia','Ella','POV / Entertainment','Elijah'],['Trivia','Elijah','POV / Entertainment','Ella'],['Product entertainment','Team']];

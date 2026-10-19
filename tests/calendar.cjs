@@ -8,6 +8,7 @@ for(const bad of ['javascript:alert(1)','https://drive.google.com.evil.com/file/
 const seed=seedPosts()[0];assert.equal(validatePost({...seed,completedAt:new Date().toISOString()}).completedAt!==null,true);
 const done=validatePost({...seed,assetUrl:url,assetType:'video',coverUrl:'https://drive.google.com/file/d/cover/view',imageTwoUrl:'https://drive.google.com/file/d/image-two/view',completedAt:'2026-09-27T05:00:00Z'});
 assert.equal(done.status,'Planned');assert.equal(done.completedAt,'2026-09-27T05:00:00Z');
+assert.equal(validatePost({...seed,status:'Scheduled'}).status,'Scheduled');
 const row=postToRow(done);assert.equal(row.asset_url,url);assert.equal(row.image_two_url,done.imageTwoUrl);assert.equal(row.completed_at,done.completedAt);assert.equal(row.posted_time,null);assert.equal(row.contentType,undefined);assert.ok(postFields.includes('imageTwoUrl:image_two_url'));assert.equal(normalizePost({...done,postedTime:'12:30:00'}).postedTime,'12:30');assert.equal(normalizePost({...done,postedTime:null}).postedTime,'');
 console.log('PASS: Drive links, resource keys, unsafe/folder URL rejection, Done validation, publication independence, and database round-trip fields.');
 const {accountName,staffNameMatches,entryIdentity,manilaTimestamp,daysBefore}=load('entry-details');

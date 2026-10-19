@@ -5,6 +5,7 @@
 .calendar-status{border-radius:5px;padding:4px 7px;font-size:10px;font-weight:700;line-height:1;white-space:nowrap}
 .calendar-status.published{background:#dcf2e4;color:#216c48}
 .calendar-status.for-posting{background:#ddecff;color:#26639b}
+.calendar-status.scheduled{background:#e4e1fb;color:#534292}
 .calendar-status.for-review{background:#fff0cf;color:#87611a}
 .calendar-status.in-progress{background:#eee5ff;color:#6947a1}
 .calendar-status.planned{background:#eceff3;color:#5e6876}
@@ -47,6 +48,9 @@
 .notificationitem span{font-size:12px;color:#7a8290;line-height:1.45}
 @media(max-width:760px){.headerend{gap:10px}.signed-user{display:none}.notificationpanel{right:-38px;width:min(320px,calc(100vw - 30px))}}
 .done-button.is-done:disabled{opacity:1;background:#216c48;color:#fff;cursor:default}
+.done-button.is-scheduled:disabled{opacity:1;background:#6250a5;color:#fff;cursor:default}
+.publish-button{background:#1f6f67}
+.published-workspace-note{margin-bottom:20px}
 dialog.entry-dialog{position:fixed;inset:0;margin:auto;width:min(760px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:0;overflow:auto;border-radius:14px}
 dialog.entry-dialog::backdrop{background:rgba(0,0,0,.55)}
 .entry-fields{border:0;padding:0;margin:0;min-width:0;display:grid;gap:18px}
